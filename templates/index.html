@@ -1,95 +1,192 @@
 {% extends "base.html" %} {% block content %}
-<div id="cash-info">
-  <h2>現金庫存</h2>
+<section class="mb-4">
+  <h1 class="h3 mb-3">資產總覽</h1>
+
+  {% if data['currency_error'] %}
+  <div class="alert alert-warning" role="alert">
+    {{ data['currency_error'] }} 目前匯率：{{ data['currency'] }}
+  </div>
+  {% endif %}
+
+  {% if data['stock_errors'] %}
+  <div class="alert alert-warning" role="alert">
+    以下股票價格暫時無法取得：{{ data['stock_errors'] | join('、') }}
+  </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="border rounded p-3 h-100">
+        <div class="text-secondary">總資產</div>
+        <div class="fs-3 fw-semibold">{{ data['total_assets'] | money }} 元</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="border rounded p-3 h-100">
+        <div class="text-secondary">現金總額</div>
+        <div class="fs-3 fw-semibold">{{ data['cash_total'] | money }} 元</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="border rounded p-3 h-100">
+        <div class="text-secondary">股票市值</div>
+        <div class="fs-3 fw-semibold">{{ data['total_stock_value'] | money }} 元</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="border rounded p-3 h-100">
+        <div class="text-secondary">美元兌台幣</div>
+        <div class="fs-3 fw-semibold">{{ data['currency'] }}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cash-info" class="mb-4">
+  <h2 class="h4 mb-3">現金庫存</h2>
   <table class="table table-bordered">
     <tr>
-      <td>台幣總額: {{data['td']}} 元</td>
-      <td>美金總額: {{data['ud']}} 元</td>
-      <td>
-        今日匯率 (出處:全球即時匯率API
-        https://tw.rter.info/howto_currencyapi.php): {{data['currency']}}
-      </td>
-      <td>現金總額: {{data['total']}} 元</td>
+      <td>台幣總額: {{ data['td'] | money }} 元</td>
+      <td>美金總額: {{ data['ud'] | money }} 元</td>
+      <td>今日匯率: {{ data['currency'] }}</td>
+      <td>現金總額: {{ data['cash_total'] | money }} 元</td>
     </tr>
   </table>
 
-  <h4>現金更動紀錄</h4>
-  <table class="table table-bordered">
-    <thead>
-      <tr>
-        <th scope="col">ID</th>
-        <th scope="col">台幣</th>
-        <th scope="col">美金</th>
-        <th scope="col">註記</th>
-        <th scope="col">時間</th>
-        <th scope="col">刪除資料</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for data in data['cash_result'] %}
-      <tr>
-        <td>{{data[0]}}</td>
-        <td>{{data[1]}}</td>
-        <td>{{data[2]}}</td>
-        <td>{{data[3]}}</td>
-        <td>{{data[4]}}</td>
-        <td>
-          <form action="/cash-delete" method="post">
-            <input type="hidden" name="id" value="{{data[0]}}" />
-            <button class="btn btn-primary">刪除此筆資料</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  <h3 class="h5">現金更動紀錄</h3>
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">台幣</th>
+          <th scope="col">美金</th>
+          <th scope="col">註記</th>
+          <th scope="col">時間</th>
+          <th scope="col">刪除資料</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data['cash_result'] %}
+        <tr>
+          <td>{{ row[0] }}</td>
+          <td>{{ row[1] | money }}</td>
+          <td>{{ row[2] | money }}</td>
+          <td>{{ row[3] }}</td>
+          <td>{{ row[4] }}</td>
+          <td>
+            <form action="/cash-delete" method="post" onsubmit="return confirm('確定要刪除這筆現金紀錄嗎？');">
+              <input type="hidden" name="id" value="{{ row[0] }}" />
+              <button class="btn btn-sm btn-outline-danger">刪除</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-secondary">尚無現金紀錄</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
 
 <hr />
 
-<div id="stock-info">
-  <h2>股票庫存</h2>
-  <table class="table table-bordered">
-    <thead>
-      <tr>
-        <th scope="col">股票代號</th>
-        <th scope="col">持有股數</th>
-        <th scope="col">目前股價</th>
-        <th scope="col">目前市值</th>
-        <th scope="col">股票資產占比(%)</th>
-        <th scope="col">購買總成本(包含手續費)</th>
-        <th scope="col">平均成本</th>
-        <th scope="col">報酬率(%)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for d in data['stock_info'] %}
-      <tr>
-        <td>{{d['stock_id']}}</td>
-        <td>{{d['shares']}}</td>
-        <td>{{d['current_price']}}</td>
-        <td>{{d['total_value']}}</td>
-        <td>{{d['value_percentage']}}</td>
-        <td>{{d['stock_cost']}}</td>
-        <td>{{d['average_cost']}}</td>
-        <td>{{d['rate_of_return']}}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<section id="stock-info" class="my-4">
+  <h2 class="h4 mb-3">股票庫存</h2>
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle">
+      <thead>
+        <tr>
+          <th scope="col">股票代號</th>
+          <th scope="col">持有股數</th>
+          <th scope="col">目前股價</th>
+          <th scope="col">目前市值</th>
+          <th scope="col">股票資產占比 (%)</th>
+          <th scope="col">購買總成本</th>
+          <th scope="col">平均成本</th>
+          <th scope="col">報酬率 (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stock in data['stock_info'] %}
+        <tr>
+          <td>{{ stock['stock_id'] }}</td>
+          <td>{{ stock['shares'] | money }}</td>
+          <td>{{ stock['current_price'] }}</td>
+          <td>{{ stock['total_value'] | money }}</td>
+          <td>{{ stock['value_percentage'] }}</td>
+          <td>{{ stock['stock_cost'] | money }}</td>
+          <td>{{ stock['average_cost'] }}</td>
+          <td>{{ stock['rate_of_return'] }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-secondary">尚無股票庫存</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-<div id="chart" style="display: flex; flex-wrap: wrap">
+  <h3 class="h5 mt-4">股票交易紀錄</h3>
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">類型</th>
+          <th scope="col">股票代號</th>
+          <th scope="col">股數</th>
+          <th scope="col">成交單價</th>
+          <th scope="col">手續費</th>
+          <th scope="col">交易稅</th>
+          <th scope="col">日期</th>
+          <th scope="col">刪除資料</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data['stock_result'] %}
+        <tr>
+          <td>{{ row[0] }}</td>
+          <td>{{ data['stock_trade_label'](row[7] if row|length > 7 else 'buy') }}</td>
+          <td>{{ row[1] }}</td>
+          <td>{{ row[2] | money }}</td>
+          <td>{{ row[3] }}</td>
+          <td>{{ row[4] | money }}</td>
+          <td>{{ row[5] | money }}</td>
+          <td>{{ row[6] }}</td>
+          <td>
+            <form action="/stock-delete" method="post" onsubmit="return confirm('確定要刪除這筆股票紀錄嗎？');">
+              <input type="hidden" name="id" value="{{ row[0] }}" />
+              <button class="btn btn-sm btn-outline-danger">刪除</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" class="text-center text-secondary">尚無股票交易紀錄</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="chart" class="d-flex flex-wrap gap-3">
   {% if data['show_pic_1'] %}
   <figure style="flex: 0 1 500px; margin: 10px">
-    <figcaption>股票庫存占比圖</figcaption>
-    <img style="width: 100%" src="/static/piechart.jpg" alt="股票庫存占比圖" />
-  </figure>
-  {% endif %} {% if data['show_pic_2'] %}
-  <figure style="flex: 0 1 500px; margin: 10px">
-    <figcaption>資產比例占比圖</figcaption>
-    <img style="width: 100%" src="/static/piechart2.jpg" alt="資產比例占比圖" />
+    <figcaption class="fw-semibold">股票庫存占比圖</figcaption>
+    <img style="width: 100%" src="/static/piechart.jpg?v={{ data['chart_version'] }}" alt="股票庫存占比圖" />
   </figure>
   {% endif %}
-</div>
+
+  {% if data['show_pic_2'] %}
+  <figure style="flex: 0 1 500px; margin: 10px">
+    <figcaption class="fw-semibold">資產比例占比圖</figcaption>
+    <img style="width: 100%" src="/static/piechart2.jpg?v={{ data['chart_version'] }}" alt="資產比例占比圖" />
+  </figure>
+  {% endif %}
+</section>
 {% endblock %}
