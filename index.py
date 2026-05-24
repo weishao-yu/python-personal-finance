@@ -9,6 +9,7 @@ matplotlib.use('agg')
 
 app = Flask(__name__)
 database = 'datafile.db'
+default_currency = 32.0
 
 
 def get_db():
@@ -36,10 +37,12 @@ def home():
         taiwanese_dollars += data[1]
         us_dollars += data[2]
     # 獲取匯率資訊
-    r = requests.get('https://tw.rter.info/capi.php')
-    currency = r.json()
-    total = math.floor(taiwanese_dollars + us_dollars *
-                       currency['USDTWD']['Exrate'])
+    try:
+        r = requests.get('https://tw.rter.info/capi.php', timeout=5)
+        currency = r.json()['USDTWD']['Exrate']
+    except (requests.RequestException, KeyError, TypeError, ValueError):
+        currency = default_currency
+    total = math.floor(taiwanese_dollars + us_dollars * currency)
 
     # 取得所有股票資訊
     result2 = cursor.execute("select * from stock")
@@ -63,11 +66,14 @@ def home():
             shares += d[2]
             stock_cost += d[2] * d[3] + d[4] + d[5]
         # 取得目前股價
-        url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&stockNo=" + stock
-        response = requests.get(url)
-        data = response.json()
-        price_array = data['data']
-        current_price = float(price_array[len(price_array) - 1][6])
+        try:
+            url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&stockNo=" + stock
+            response = requests.get(url, timeout=5)
+            data = response.json()
+            price_array = data['data']
+            current_price = float(price_array[len(price_array) - 1][6].replace(',', ''))
+        except (requests.RequestException, KeyError, IndexError, TypeError, ValueError):
+            continue
         # 單一股票總市值
         total_value = round(current_price * shares)
         total_stock_value += total_value
@@ -85,38 +91,39 @@ def home():
             stock['total_value'] * 100 / total_stock_value, 2)
 
     # 繪製股票圓餅圖
-    if len(unique_stock_list) != 0:
-        labels = tuple(unique_stock_list)
+    if len(stock_info) != 0:
+        labels = tuple(d['stock_id'] for d in stock_info)
         sizes = [d['total_value'] for d in stock_info]
         fig, ax = plt.subplots(figsize=(6, 5))
         ax.pie(sizes, labels=labels, autopct=None, shadow=None)
         fig.subplots_adjust(top=1, bottom=0, right=1,
                             left=0, hspace=0, wspace=0)
         plt.savefig("static/piechart.jpg", dpi=200)
+        plt.close(fig)
     else:
         try:
             os.remove('static/piechart.jpg')
-        except:
+        except FileNotFoundError:
             pass
 
     # 繪製股票現金圓餅圖
     if us_dollars != 0 or taiwanese_dollars != 0 or total_stock_value != 0:
         labels = ('USD', 'TWD', 'Stock')
-        sizes = (us_dollars * currency['USDTWD']['Exrate'],
-                 taiwanese_dollars, total_stock_value)
+        sizes = (us_dollars * currency, taiwanese_dollars, total_stock_value)
         fig, ax = plt.subplots(figsize=(6, 5))
         ax.pie(sizes, labels=labels, autopct=None, shadow=None)
         fig.subplots_adjust(top=1, bottom=0, right=1,
                             left=0, hspace=0, wspace=0)
         plt.savefig("static/piechart2.jpg", dpi=200)
+        plt.close(fig)
     else:
         try:
             os.remove('static/piechart2.jpg')
-        except:
+        except FileNotFoundError:
             pass
 
     data = {'show_pic_1': os.path.exists('static/piechart.jpg'),'show_pic_2': os.path.exists('static/piechart2.jpg'),
-            'total': total, 'currency': currency['USDTWD']['Exrate'], 'ud': us_dollars,
+            'total': total, 'currency': currency, 'ud': us_dollars,
             'td': taiwanese_dollars, 'cash_result': cash_result, 'stock_info': stock_info}
 
     return render_template('index.html', data=data)
