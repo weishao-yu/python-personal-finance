@@ -1,31 +1,54 @@
 # Python Personal Finance
 
-Flask + SQLite personal finance tracker for cash and Taiwan stock records.
+A small Flask + SQLite personal finance app for tracking cash and Taiwan stock records.
 
 ## Features
 
 - Track TWD and USD cash records.
-- Track stock buy and sell records.
+- Track Taiwan stock buy and sell records.
 - Delete cash and stock records with browser confirmation.
-- Show asset summary, stock holdings, transaction history, and pie charts.
-- Fetch USD/TWD exchange rate and Taiwan stock prices with a short cache.
-- Initialize or migrate the SQLite database safely.
+- Show total assets, cash value, stock market value, stock holdings, and transaction history.
+- Generate asset allocation pie charts.
+- Fetch USD/TWD exchange rate and Taiwan stock prices.
+- Cache external API results for 5 minutes to reduce repeated requests.
+- Initialize and migrate the SQLite database safely.
 
 ## Setup
 
+Install dependencies:
+
 ```powershell
 py -m pip install -r requirements.txt
-py db_setting.py
-py -m flask --app index run --port 5001
 ```
 
-Then open:
+Initialize or update the database:
+
+```powershell
+py db_setting.py
+```
+
+Run the app:
+
+```powershell
+py -m flask --app index run --port 5000
+```
+
+Open:
 
 ```text
-http://127.0.0.1:5001/
+http://127.0.0.1:5000/
 ```
+
+## Files
+
+- `index.py`: Flask routes, calculations, validation, API fetching, and chart generation.
+- `db_setting.py`: Creates or updates the SQLite tables.
+- `templates/`: HTML pages.
+- `static/`: Generated chart images.
+- `datafile.db`: Local SQLite database.
 
 ## Notes
 
-- Stock prices are fetched from TWSE, so this app is primarily for Taiwan-listed stocks.
-- The sell calculation is a simple reduction of shares and transaction amount. It is useful for small practice projects, but it is not a full tax or realized-profit accounting system.
+- Stock prices are fetched from TWSE, so this app is mainly for Taiwan-listed stocks.
+- Sell records reduce the share count and cost amount in a simple way. This is useful for a practice project, but it is not full realized-profit or tax accounting.
+- If you publish this project publicly, consider whether you want to include `datafile.db`, because it may contain your personal finance records.
