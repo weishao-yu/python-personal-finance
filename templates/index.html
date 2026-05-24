@@ -35,7 +35,7 @@
     </div>
     <div class="col-12 col-md-6 col-xl-3">
       <div class="border rounded p-3 h-100">
-        <div class="text-secondary">美元兌台幣</div>
+        <div class="text-secondary">美元兌台幣 (來源 - 全球即時匯率API)</div>
         <div class="fs-3 fw-semibold">{{ data['currency'] }}</div>
       </div>
     </div>
@@ -48,7 +48,7 @@
     <tr>
       <td>台幣總額: {{ data['td'] | money }} 元</td>
       <td>美金總額: {{ data['ud'] | money }} 元</td>
-      <td>今日匯率: {{ data['currency'] }}</td>
+      <td>今日匯率: {{ data['currency'] }} (來源 - 全球即時匯率API)</td>
       <td>現金總額: {{ data['cash_total'] | money }} 元</td>
     </tr>
   </table>
